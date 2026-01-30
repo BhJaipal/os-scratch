@@ -28,3 +28,13 @@ make run	# but why would you do it
 ## Requirements
 
 > Need QEmu btw (Ofc)
+
+## Questions
+
+### Why license?
+
+> Idk, it just poped up during `gh repo create` so I putted it in
+
+### Where to ask me Questions?
+
+> On Instagram [@jaipalbh7](https://instagram.com/jaipalbh7)
