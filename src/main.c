@@ -5,16 +5,24 @@ void kmain() {
 	const char WHITE_ON_BLACK= 0x0f;
 
 	clear(WHITE_ON_BLACK, VIDEO_MEMORY);
-	char name[] = "Kernel loaded                      Hello Jaipal";
-	for (int i = 0; i < 12; i++) {
-		VIDEO_MEMORY[i] = (WHITE_ON_BLACK << 8) | name[i];
-		asm("add $1, %ebx\n");
+	char name[] = "Kernel loaded\nHello Jaipal";
+	int video_location = 0;
+	for (int i = 0; i < 27; i++) {
+		if (name[i] == '\n') {
+			video_location = 80;
+			continue;
+		}
+		VIDEO_MEMORY[video_location] = (WHITE_ON_BLACK << 8) | name[i];
+		video_location++;
 	}
+
+	while(1) {
+        asm("hlt"); 
+    }
 }
 
 void clear(const char WHITE_ON_BLACK, short *VIDEO_MEMORY) {
 	for (int i = 0; i < 0x80; i++) {
 		VIDEO_MEMORY[i] = (WHITE_ON_BLACK << 8) | ' ';
-		asm("add $1, %ebx\n");
 	}
 }

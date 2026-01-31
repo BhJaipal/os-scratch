@@ -9,9 +9,7 @@ _start:
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %ss
-	mov $0x7c00, %sp
 
-	mov %dl, (BOOT_DRIVE) # Remember that the BIOS sets us the boot drive in 'dl' on boot
     mov $0x9000, %bp
     mov %bp, %sp
 
@@ -20,18 +18,18 @@ _start:
     mov %ax, %es         # ES now points to 0x1000
     xor %bx, %bx         # Offset 0
     # Destination is ES:BX -> (0x1000 * 16) + 0 = 0x10000
-	mov $0x02, %ah           # BIOS read sector function
+	mov $2, %ah              # BIOS read sector function
     mov $8, %al              # Number of sectors to read (adjust as needed)
     mov $0, %ch              # Cylinder 0
     mov $2, %cl              # Sector 2 (Sector 1 is the bootloader)
     mov $0, %dh              # Head 0
 	int $0x13
-    
+
     jc disk_error
 	jmp disable_int
 
 disk_error:
-	mov $disk_err_msg, %bx
+	mov $disk_err_msg, %dx
 	call print
 	call println
 disable_int:
@@ -58,12 +56,13 @@ disable_int:
 print:
 	lodsb
 print_loop:
-	mov (%bx), %al
+	inb (%dx), %al
 	cmp $0, %al
 	je print_end
 	mov $0x0e, %ah
+	mov $0x07, %bl
 	int $0x10
-	add $1, %bx
+	add $1, %dx
 	jmp print_loop
 print_end:
 	ret
@@ -79,7 +78,7 @@ println:
 .code32
 entry32:
 	mov $1, %ebx
-	mov $name, %edx
+	mov $running_kernel, %edx
 	call print_cli
 	call println_cli
 
@@ -87,9 +86,6 @@ entry32:
 	call *%eax
 1:
 	jmp 1b
-
-name: .asciz "Loading kernel...\r"
-
 
 print_cli:
 	mov $0xb8000, %ecx # VIDEO_MEMORY
@@ -130,10 +126,10 @@ gdt_start:
 	.quad 0x0000000000000000    #	Null Descriptor
 gdt_code_segment:
     .word 0xffff, 0x0000
-    .byte 0x00, 0b10011010, 0b11001111, 0x00
+    .byte 0x00, 0x9a, 0xcf, 0x00
 gdt_data_segment:
     .word 0xffff, 0x0000
-    .byte 0x00, 0b10010010, 0b11001111, 0x00
+    .byte 0x00, 0x92, 0xcf, 0x00
 gdt_end:
 
 /* IDT */
@@ -141,11 +137,11 @@ idt:
     .word 0
     .long 0
 
-disk_err_msg: .asciz "Can't load kernel from disk"
+running_kernel: .asciz "Trying to run Kernel"
+disk_err_msg:   .asciz "Can't load kernel from disk"
 
 KERNEL_OFFSET: .long 0x20000
-BOOT_DRIVE: .byte 0x0
-
+BOOT_DRIVE:    .byte 0
 
 /* MBR BOOT SIGNATURE */
 .fill 510-(.-_start), 1, 0
