@@ -5,53 +5,54 @@
 .global _start
 
 _start:
-	mov $0, %ax
+	# Segment setup
+	xor %ax, %ax
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %ss
 
-    mov $0x9000, %bp
-    mov %bp, %sp
+	# Stack setup
+	mov $0x9000, %bp
+	mov %bp, %sp
 
 	# Load Kernel from Disk
-    mov $0x1000, %ax     # Segment 0x1000
-    mov %ax, %es         # ES now points to 0x1000
-    xor %bx, %bx         # Offset 0
-    # Destination is ES:BX -> (0x1000 * 16) + 0 = 0x10000
+	mov $0x1000, %ax     # Segment 0x1000
+	mov %ax, %es         # ES now points to 0x1000
+	xor %bx, %bx         # Offset 0
+	# Destination is ES:BX -> (0x1000 * 16) + 0 = 0x10000
 	mov $2, %ah              # BIOS read sector function
-    mov $8, %al              # Number of sectors to read (adjust as needed)
-    mov $0, %ch              # Cylinder 0
-    mov $2, %cl              # Sector 2 (Sector 1 is the bootloader)
-    mov $0, %dh              # Head 0
+	mov $8, %al              # Number of sectors to read (adjust as needed)
+	xor %ch, %ch             # Cylinder 0
+	mov $2, %cl              # Sector 2 (Sector 1 is the bootloader)
+	xor %dh, %dh             # Head 0
 	int $0x13
 
-    jc disk_error
+	jc disk_error
 	jmp disable_int
 
 disk_error:
 	mov $disk_err_msg, %dx
 	call print
 	call println
-disable_int:
 
-    cli
-    lgdt gdtp
-    lidt idt
+disable_int:
+	cli
+	lgdt gdtp
+	lidt idt
 
 	mov %cr0, %eax    # This works in 16-bit mode!
-    or $0x1, %eax     # Modify the 32-bit register
-    mov %eax, %cr0    # Write it back
+	or $0x1, %eax     # Modify the 32-bit register
+	mov %eax, %cr0    # Write it back
 
 	movw $(gdt_data_segment - gdt_start), %ax
-    movw %ax, %ds
-    movw %ax, %es
-    movw %ax, %es
-    movw %ax, %fs
-    movw %ax, %gs
-    movw %ax, %ss
-	movl $0x3000, %esp
+	movw %ax, %ds
+	movw %ax, %es
+	movw %ax, %es
+	movw %ax, %fs
+	movw %ax, %gs
+	movw %ax, %ss
 
-    ljmp $0x8, $entry32
+	ljmp $(gdt_code_segment - gdt_start), $entry32
 
 print:
 	lodsb
@@ -81,8 +82,7 @@ entry32:
 	mov $running_kernel, %edx
 	call print_cli
 	call println_cli
-
-    mov $KERNEL_OFFSET, %eax
+	mov $KERNEL_OFFSET, %eax
 	call *%eax
 1:
 	jmp 1b
@@ -117,25 +117,43 @@ println_cli:
 /* GDT */
 .align 16
 gdtp:
-    .word gdt_end - gdt_start - 1
-    /* .long (0x07C0 << 4) + gdt */
-    .long gdt_start
+	.word gdt_end - gdt_start - 1
+	/* .long (0x07C0 << 4) + gdt */
+	.long gdt_start
 
 .align 16
 gdt_start:
 	.quad 0x0000000000000000    #	Null Descriptor
 gdt_code_segment:
-    .word 0xffff, 0x0000
-    .byte 0x00, 0x9a, 0xcf, 0x00
+	#    Segment limit  Base address
+	.word 0xffff,       0x0000
+	.byte 0x00        # Base
+	# 1st  flags: (present) 1    (privilege)   0                    0         (descriptor type)1 -> 1001b
+	# Type flags: (code)    1    (conforming)  0        (readable)  1         (accessed)       0 -> 1010b
+	# 10011010
+	.byte 0x9a
+	# 2nd  flags: (granularity) 1    (32-bit default) 1    (64-bit segment) 0    (available)   0 -> 1100b
+	.byte 0xcf
+	.byte 0x00        # Base
+
 gdt_data_segment:
-    .word 0xffff, 0x0000
-    .byte 0x00, 0x92, 0xcf, 0x00
+	#    Segment limit  Base address
+	.word 0xffff,       0x0000
+	.byte 0x00        # Base
+	# 1st  flags: (present) 1    (privilege)   0                    0         (descriptor type)1 -> 1001b
+	# Type flags: (code)    0    (conforming)  0        (readable)  1         (accessed)       0 -> 1010b
+	# 10010010
+	.byte 0x92
+	# 2nd  flags: (granularity) 1    (32-bit default) 1    (64-bit segment) 0    (available)   0 -> 1100b
+	.byte 0xcf
+	.byte 0x00        # Base
+
 gdt_end:
 
 /* IDT */
 idt:
-    .word 0
-    .long 0
+	.word 0
+	.long 0
 
 running_kernel: .asciz "Trying to run Kernel"
 disk_err_msg:   .asciz "Can't load kernel from disk"

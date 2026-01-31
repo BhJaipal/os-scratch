@@ -10,5 +10,5 @@ _start:
 .section .bss
 .align 16
 stack_bottom:
-    .skip 0x4000 # 16KiB stack
+	.skip 0x4000 # 16KiB stack
 stack_top:

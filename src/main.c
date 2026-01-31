@@ -17,8 +17,8 @@ void kmain() {
 	}
 
 	while(1) {
-        asm("hlt"); 
-    }
+		asm("hlt"); 
+	}
 }
 
 void clear(const char WHITE_ON_BLACK, short *VIDEO_MEMORY) {
