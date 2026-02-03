@@ -2,7 +2,7 @@ OUTPUT_FORMAT("binary")
 ENTRY(_start)
 SECTIONS
 {
-    . = 0x20000;
+    . = 0x2000;
 
     .text BLOCK(4K) : ALIGN(4K)
     {

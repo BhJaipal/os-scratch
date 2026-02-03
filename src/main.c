@@ -1,13 +1,22 @@
+long __strlen(char *s) {
+	long res = 0;
+	while (s[res]) {
+		res++;
+	}
+	return res;
+}
 
 void clear(const char WHITE_ON_BLACK, short *VIDEO_MEMORY);
 void kmain() {
 	short *VIDEO_MEMORY = (short*)0xb8000;
-	const char WHITE_ON_BLACK= 0x0f;
+	const char WHITE_ON_BLACK = 0x0f;
 
 	clear(WHITE_ON_BLACK, VIDEO_MEMORY);
-	char name[] = "Kernel loaded\nHello Jaipal";
+	char name[] = "Kernel loaded\nHello Jaipal from 64-bit";
 	int video_location = 0;
-	for (int i = 0; i < 27; i++) {
+
+	long len = __strlen(name);
+	for (int i = 0; i < len; i++) {
 		if (name[i] == '\n') {
 			video_location = 80;
 			continue;

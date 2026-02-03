@@ -1,9 +1,9 @@
-.code32
+.code64
 .text
 .global _start
 
 _start:
-	mov $stack_top, %esp
+	mov $stack_top, %rsp
 
 	call kmain        # Call the C function
 

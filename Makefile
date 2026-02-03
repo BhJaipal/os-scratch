@@ -2,19 +2,26 @@
 # $< = first dependency
 # $^ = all dependencies
 
+LDFLAGS =  --oformat binary -N
+
+CFLAGS = -ffreestanding -fno-pie # -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2
+
 all: run
 
 out/%.o: src/%.c
-	gcc -ffreestanding -m32 -fno-pie $< -c -o $@
+	gcc $(CFLAGS) $< -c -o $@ -O0
 
 out/%.o: boot/%.asm
-	as --32 -o $@ $<
+	as -o $@ $<
 
 bin/kernel: out/kernel.o out/main.o
-	ld -N -o $@ -Tlink.ld --oformat binary -m elf_i386 $^
+	ld -o $@ -Tlink.ld     $(LDFLAGS) $^
 
 bin/bootsect: out/boot.o
-	ld -N -o $@ -Ttext 0x7C00 --oformat binary -m elf_i386 $<
+	ld -o $@ -Ttext 0x7c00 $(LDFLAGS) $<
+
+bin/bootsect64: out/boot64.o
+	ld -o $@ -Ttext 0x7c00 --oformat binary -N $<
 
 os-img.bin: bin/bootsect bin/kernel
 	cat $^ > $@
