@@ -1,4 +1,3 @@
-# This file's sole purpose is to go to 64-bit mode, copy anything from here
 .code16
 .org 0
 
@@ -13,9 +12,30 @@ _start:
 	mov %ax, %ss
 
 	# Stack setup
-	mov $0x7c00, %bp
+	mov $0x9000, %bp
 	mov %bp, %sp
 
+	# Load Kernel from Disk
+	mov $0x1000, %ax     # Segment 0x1000
+	mov %ax, %es         # ES now points to 0x1000
+	xor %bx, %bx         # Offset 0
+	# Destination is ES:BX -> (0x1000 * 16) + 0 = 0x10000
+	mov $2, %ah              # BIOS read sector function
+	mov $8, %al              # Number of sectors to read (adjust as needed)
+	xor %ch, %ch             # Cylinder 0
+	mov $2, %cl              # Sector 2 (Sector 1 is the bootloader)
+	xor %dh, %dh             # Head 0
+	int $0x13
+
+	jc disk_error
+	jmp disable_int
+
+disk_error:
+	mov $disk_err_msg, %dx
+	call print
+	call println
+
+disable_int:
 	cli
 	lgdt gdtp
 	lidt idt
@@ -98,10 +118,8 @@ entry32:
 
 .code64
 entry64:
-    # Use a bright color like Green (0x2) or Red (0x4)
-    movq $0x2f342f36, %rax       # '6' and '4' on Green/Grey
-    movq %rax, 0xb8000
-    hlt
+	mov $KERNEL_OFFSET, %rax
+	call *%rax
 
 print_cli:
 	mov $0xb8000, %ecx # VIDEO_MEMORY
@@ -182,6 +200,11 @@ idt:
 	.long 0
 
 running_kernel: .asciz "Trying to run Kernel"
+disk_err_msg:   .asciz "Can't load kernel from disk"
 
+KERNEL_OFFSET: .long 0x2000
+BOOT_DRIVE:    .byte 0
+
+/* MBR BOOT SIGNATURE */
 .fill 510-(.-_start), 1, 0
 .word 0xAA55

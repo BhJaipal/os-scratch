@@ -38,9 +38,9 @@ print:
 	lodsb
 print_loop:
 	inb (%dx), %al
-	cmp $0, %al
+	cmp $0, %al    # ascii code
 	je print_end
-	mov $0x0e, %ah
+	mov $0x0e, %ah # scan code
 	mov $0x07, %bl
 	int $0x10
 	add $1, %dx
@@ -101,6 +101,7 @@ entry64:
     # Use a bright color like Green (0x2) or Red (0x4)
     movq $0x2f342f36, %rax       # '6' and '4' on Green/Grey
     movq %rax, 0xb8000
+	
     hlt
 
 print_cli:
