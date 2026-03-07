@@ -54,6 +54,7 @@ out/%.o.win32: %.c
 
 main.efi: $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $^
+	$(ARCH)-objcopy -j .text -j .data -j .reloc -j .pdata $@
 
 
 uefi.img: main.efi

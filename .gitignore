@@ -1,6 +1,6 @@
 *.bin
-out/*.o
-bin/*
+out/
+bin/
 main.efi
 *.img
 iso/
