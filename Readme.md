@@ -1,5 +1,7 @@
 # OS from scratch
 
+## Moving to codeberg [BhJaipal/os-bios](https://codeberg.org/BhJaipal/os-bios.git)
+
 > An attempt to write an OS from scratch
 >
 > Most bootloaders were written in `Intel` assembly which were kinda abnormal 

@@ -6,70 +6,48 @@ BIOS_LDFLAGS =  --oformat binary -N
 
 BIOS_CFLAGS = -ffreestanding -fno-pie # -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2
 
+RED          := \033[31m
+BLUE         := \033[94m
+CYAN         := \033[36m
+GREEN        := \033[32m
+YELLOW       := \033[33m
+BOLD         := \033[1m
+NC           := \033[0m
+
+PRINT_STEP_DEL =   @printf "  $(RED)%-7s$(NC)  $(BOLD)%s$(NC)\n" "$(1)" "$(2)"
+PRINT_STEP =       @printf "  $(BLUE)%-7s$(NC)  $(BOLD)%s$(NC)\n" "$(1)" "$(2)"
+PRINT_STEP_MSDOS = @printf "  $(YELLOW)%-7s$(NC)$(BOLD)%s$(NC)\n" "$(1)" "$(2)"
+
 all: run
 
 out/%.o: src/%.c
-	gcc $(BIOS_CFLAGS) $< -c -o $@ -O0
+	$(call PRINT_STEP, "CC", $(<:.c=.o))
+	@gcc $(BIOS_CFLAGS) $< -c -o $@ -O0
 
-out/%.o: boot/%.asm
-	as -o $@ $<
+out/%.o: bootloader/%.asm
+	$(call PRINT_STEP, "AS", $(<:.asm=.o))
+	@as -o $@ $<
 
 bin/kernel: out/kernel.o out/main.o out/bios.o
-	ld -o $@ -Tlink.ld     $(BIOS_LDFLAGS) $^
+	$(call PRINT_STEP, "LD", $@)
+	@ld -o $@ -Tlink.ld     $(BIOS_LDFLAGS) $^
 
 bin/bootsect: out/boot.o
-	ld -o $@ -Ttext 0x7c00 $(BIOS_LDFLAGS) $<
+	$(call PRINT_STEP, "LD", $@)
+	@ld -o $@ -Ttext 0x7c00 $(BIOS_LDFLAGS) $<
 
 os-img.bin: bin/bootsect bin/kernel
-	cat $^ > $@
-	truncate -s 10240 $@
+	$(call PRINT_STEP_MSDOS, "TRUNCATE", $@)
+	@cat $^ > $@
+	@truncate -s 10240 $@
 
 run: os-img.bin
-	qemu-system-x86_64 -drive format=raw,file=$<
+	@printf "  $(GREEN) QEMU $(NC)  $(BOLD)  $<$(NC)\n"
+	@qemu-system-x86_64 -drive format=raw,file=$<
 
-clean:
-	rm out/*.o bin/*
-
-CFLAGS  = -ffreestanding -fno-stack-protector -fno-stack-check -fshort-wchar -mno-red-zone -mabi=ms -Wall -Wno-pointer-to-int-cast
-LDFLAGS = -nostdlib \
-    		-Wl,-subsystem,10 \
-    		-Wl,-entry,efi_main \
-			-Wl,--pic-executable \
-    		-Wl,--file-alignment,512 \
-    		-Wl,--section-alignment,4096
-
-ARCH = x86_64-w64-mingw32
-CC = $(ARCH)-gcc-win32
-
-define SRC_to_OBJ
-out/$(basename $(1)).o.win32
-endef
-
-SRC := src/efi.c src/main.c
-OBJ := $(foreach src, $(SRC), $(call SRC_to_OBJ,$(src)))
-
-
-out/%.o.win32: %.c
-	$(CC) -I/usr/include/efi/ -Iinclude $(CFLAGS) -Wall -c $< -o $@
-
-main.efi: $(OBJ)
-	$(CC) $(LDFLAGS) -o $@ $^
-	$(ARCH)-objcopy -j .text -j .data -j .reloc -j .pdata $@
-
-
-uefi.img: main.efi
-	# 1. Create a 64MB empty file
-	dd if=/dev/zero of=$@ bs=1M count=64
-	
-	# 2. Create GPT partition table and a single EFI partition
-	parted $@ -s mklabel gpt
-	parted $@ -s mkpart EFI fat32 1MiB 100%
-	parted $@ -s set 1 esp on
-	
-	mformat -i $@@@1M -F
-	mmd     -i $@@@1M ::/EFI
-	mmd     -i $@@@1M ::/EFI/BOOT
-	mcopy   -i $@@@1M $< ::/EFI/BOOT/BOOTX64.EFI
-	
-run-efi: uefi.img
-	qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -drive file=$<,format=raw -net none
+.ONESHELL:
+clean: os-img.bin $(wildcard out/*.o bin/*)
+	@for i in $^; do
+		$(call PRINT_STEP_DEL, "RM", $$i);\
+			rm $$i;\
+			done

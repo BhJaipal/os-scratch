@@ -205,6 +205,7 @@ disk_err_msg:   .asciz "Can't load kernel from disk"
 KERNEL_OFFSET: .long 0x2000
 BOOT_DRIVE:    .byte 0
 
+.text
 /* MBR BOOT SIGNATURE */
 .fill 510-(.-_start), 1, 0
 .word 0xAA55
